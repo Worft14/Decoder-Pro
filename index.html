@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Decoder Pro</title>
+
+<style>
+body {
+  background: #0d0d0d;
+  color: #00ff9c;
+  font-family: monospace;
+  text-align: center;
+  padding: 30px;
+}
+
+textarea {
+  width: 80%;
+  height: 100px;
+  background: black;
+  color: #00ff9c;
+  border: 1px solid #00ff9c;
+  padding: 10px;
+}
+
+button {
+  background: #00ff9c;
+  border: none;
+  padding: 5px 10px;
+  margin-left: 10px;
+  cursor: pointer;
+}
+
+#output {
+  text-align: left;
+  background: black;
+  padding: 15px;
+  margin-top: 20px;
+  border: 1px solid #00ff9c;
+}
+</style>
+</head>
+
+<body>
+
+<h2>DECODER MULTI-LENGUAJE</h2>
+
+<textarea id="input" placeholder="Pega tu código aquí"></textarea><br><br>
+<button onclick="decode()">Decodificar</button>
+
+<div id="output"></div>
+
+<script>
+function decode() {
+  let text = document.getElementById("input").value.trim();
+  let results = [];
+
+  function addResult(label, value) {
+    if (!value) return;
+    results.push(`
+      <div style="margin-bottom:10px;">
+        <b>${label}:</b> ${value}
+        <button onclick="copyText('${value.replace(/'/g, "\\'")}')">Copiar</button>
+      </div>
+    `);
+  }
+
+  // MORSE
+  const morse = {
+    ".-":"A","-...":"B","-.-.":"C","-..":"D",".":"E","..-.":"F","--.":"G",
+    "....":"H","..":"I",".---":"J","-.-":"K",".-..":"L","--":"M","-.":"N",
+    "---":"O",".--.":"P","--.-":"Q",".-.":"R","...":"S","-":"T","..-":"U",
+    "...-":"V",".--":"W","-..-":"X","-.--":"Y","--..":"Z"
+  };
+  let morseDecoded = text.split(" ").map(c => morse[c] || "?").join("");
+  addResult("Morse", morseDecoded);
+
+  // BINARIO
+  try {
+    let binary = text.split(" ").map(b => String.fromCharCode(parseInt(b, 2))).join("");
+    addResult("Binario", binary);
+  } catch {}
+
+  // BASE64
+  try {
+    let base64 = atob(text);
+    addResult("Base64", base64);
+  } catch {}
+
+  // HEX
+  try {
+    let hex = text.match(/.{1,2}/g).map(h => String.fromCharCode(parseInt(h, 16))).join("");
+    addResult("Hex", hex);
+  } catch {}
+
+  // ROT13
+  function rot13(str) {
+    return str.replace(/[a-zA-Z]/g, c => {
+      return String.fromCharCode(
+        (c <= "Z" ? 90 : 122) >= (c = c.charCodeAt(0) + 13) ? c : c - 26
+      );
+    });
+  }
+  addResult("ROT13", rot13(text));
+
+  // CÉSAR
+  function caesar(str, shift) {
+    return str.replace(/[a-z]/gi, c => {
+      let base = c === c.toUpperCase() ? 65 : 97;
+      return String.fromCharCode((c.charCodeAt(0) - base + shift) % 26 + base);
+    });
+  }
+
+  for (let i = 1; i < 26; i++) {
+    addResult("César +" + i, caesar(text, i));
+  }
+
+  // ASCII
+  try {
+    let ascii = text.split(" ").map(n => String.fromCharCode(n)).join("");
+    addResult("ASCII", ascii);
+  } catch {}
+
+  // BASE32
+  try {
+    const base32chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+    let bits = "";
+    let output = "";
+    let base32text = text.replace(/=+$/, "");
+
+    for (let i = 0; i < base32text.length; i++) {
+      let val = base32chars.indexOf(base32text[i].toUpperCase());
+      if (val === -1) continue;
+      bits += val.toString(2).padStart(5, '0');
+    }
+
+    for (let i = 0; i + 8 <= bits.length; i += 8) {
+      output += String.fromCharCode(parseInt(bits.substring(i, i+8), 2));
+    }
+
+    addResult("Base32", output);
+  } catch {}
+
+  document.getElementById("output").innerHTML = results.join("");
+}
+
+// COPIAR
+function copyText(text) {
+  navigator.clipboard.writeText(text);
+  alert("Copiado");
+}
+</script>
+
+</body>
+</html>
