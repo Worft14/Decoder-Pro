@@ -7,44 +7,94 @@
 <style>
 body {
   background: #0d0d0d;
-  color: #00ff9c;
-  font-family: monospace;
+  color: #eaeaea;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
   text-align: center;
-  padding: 30px;
+  padding: 40px;
 }
 
+/* Título */
+h2 {
+  font-weight: 500;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeIn 1s ease forwards;
+}
+
+/* Input */
 textarea {
   width: 80%;
   height: 100px;
-  background: black;
-  color: #00ff9c;
-  border: 1px solid #00ff9c;
-  padding: 10px;
-}
-
-button {
-  background: #00ff9c;
-  border: none;
-  padding: 5px 10px;
-  margin-left: 10px;
-  cursor: pointer;
-}
-
-#output {
-  text-align: left;
-  background: black;
-  padding: 15px;
+  background: #111;
+  color: white;
+  border: 1px solid #333;
+  padding: 12px;
+  border-radius: 10px;
   margin-top: 20px;
-  border: 1px solid #00ff9c;
+}
+
+/* Botón */
+button {
+  background: white;
+  color: black;
+  border: none;
+  padding: 10px 20px;
+  margin-top: 15px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+button:hover {
+  transform: scale(1.05);
+}
+
+/* Resultados */
+.result {
+  background: #111;
+  border: 1px solid #222;
+  padding: 12px;
+  margin: 10px auto;
+  width: 80%;
+  border-radius: 12px;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 0.5s ease forwards;
+}
+
+.result b {
+  color: #aaa;
+}
+
+.copy-btn {
+  margin-left: 10px;
+  border-radius: 10px;
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>
 </head>
 
 <body>
 
-<h2>DECODER MULTI-LENGUAJE</h2>
+<h2>Decoder</h2>
 
-<textarea id="input" placeholder="Pega tu código aquí"></textarea><br><br>
+<textarea id="input" placeholder="Pega tu código..."></textarea><br>
 <button onclick="decode()">Decodificar</button>
 
 <div id="output"></div>
@@ -52,17 +102,25 @@ button {
 <script>
 function decode() {
   let text = document.getElementById("input").value.trim();
-  let results = [];
+  let output = document.getElementById("output");
+  output.innerHTML = "";
 
-  function addResult(label, value) {
+  function addResult(label, value, delay) {
     if (!value) return;
-    results.push(`
-      <div style="margin-bottom:10px;">
-        <b>${label}:</b> ${value}
-        <button onclick="copyText('${value.replace(/'/g, "\\'")}')">Copiar</button>
-      </div>
-    `);
+
+    let div = document.createElement("div");
+    div.className = "result";
+    div.style.animationDelay = delay + "ms";
+
+    div.innerHTML = `
+      <b>${label}:</b> ${value}
+      <button class="copy-btn" onclick="copyText('${value.replace(/'/g, "\\'")}')">Copiar</button>
+    `;
+
+    output.appendChild(div);
   }
+
+  let delay = 0;
 
   // MORSE
   const morse = {
@@ -72,35 +130,30 @@ function decode() {
     "...-":"V",".--":"W","-..-":"X","-.--":"Y","--..":"Z"
   };
   let morseDecoded = text.split(" ").map(c => morse[c] || "?").join("");
-  addResult("Morse", morseDecoded);
+  addResult("Morse", morseDecoded, delay); delay += 80;
+
+  // BASE64
+  try {
+    addResult("Base64", atob(text), delay); delay += 80;
+  } catch {}
 
   // BINARIO
   try {
     let binary = text.split(" ").map(b => String.fromCharCode(parseInt(b, 2))).join("");
-    addResult("Binario", binary);
-  } catch {}
-
-  // BASE64
-  try {
-    let base64 = atob(text);
-    addResult("Base64", base64);
+    addResult("Binario", binary, delay); delay += 80;
   } catch {}
 
   // HEX
   try {
     let hex = text.match(/.{1,2}/g).map(h => String.fromCharCode(parseInt(h, 16))).join("");
-    addResult("Hex", hex);
+    addResult("Hex", hex, delay); delay += 80;
   } catch {}
 
   // ROT13
-  function rot13(str) {
-    return str.replace(/[a-zA-Z]/g, c => {
-      return String.fromCharCode(
-        (c <= "Z" ? 90 : 122) >= (c = c.charCodeAt(0) + 13) ? c : c - 26
-      );
-    });
-  }
-  addResult("ROT13", rot13(text));
+  let rot13 = text.replace(/[a-zA-Z]/g, c => 
+    String.fromCharCode((c <= "Z" ? 90 : 122) >= (c = c.charCodeAt(0) + 13) ? c : c - 26)
+  );
+  addResult("ROT13", rot13, delay); delay += 80;
 
   // CÉSAR
   function caesar(str, shift) {
@@ -111,20 +164,21 @@ function decode() {
   }
 
   for (let i = 1; i < 26; i++) {
-    addResult("César +" + i, caesar(text, i));
+    addResult("César +" + i, caesar(text, i), delay);
+    delay += 30;
   }
 
   // ASCII
   try {
     let ascii = text.split(" ").map(n => String.fromCharCode(n)).join("");
-    addResult("ASCII", ascii);
+    addResult("ASCII", ascii, delay); delay += 80;
   } catch {}
 
   // BASE32
   try {
     const base32chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
     let bits = "";
-    let output = "";
+    let outputText = "";
     let base32text = text.replace(/=+$/, "");
 
     for (let i = 0; i < base32text.length; i++) {
@@ -134,19 +188,16 @@ function decode() {
     }
 
     for (let i = 0; i + 8 <= bits.length; i += 8) {
-      output += String.fromCharCode(parseInt(bits.substring(i, i+8), 2));
+      outputText += String.fromCharCode(parseInt(bits.substring(i, i+8), 2));
     }
 
-    addResult("Base32", output);
+    addResult("Base32", outputText, delay);
   } catch {}
-
-  document.getElementById("output").innerHTML = results.join("");
 }
 
-// COPIAR
+// copiar
 function copyText(text) {
   navigator.clipboard.writeText(text);
-  alert("Copiado");
 }
 </script>
 
